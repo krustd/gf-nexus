@@ -1,0 +1,9 @@
+[database]
+type = "sqlite"
+file_path = "./config.db"
+
+[admin]
+addr = ":8081"
+
+[server]
+addr = ":8082"

@@ -1,0 +1,8 @@
+# Nexus-Config Client 配置示例
+
+server_addr = "http://localhost:8082"
+namespace = "myapp"
+config_key = "app.yaml"
+client_id = "client-001"
+poll_timeout = 30
+retry_delay = 5
