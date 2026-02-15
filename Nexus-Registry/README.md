@@ -44,7 +44,7 @@ package main
 import (
     "github.com/gogf/gf/v2/frame/g"
     "github.com/gogf/gf/v2/net/ghttp"
-    nexus "github.com/krustd/nexus-sdk"
+    nexus "github.com/krustd/nexus-registry"
 )
 
 func main() {

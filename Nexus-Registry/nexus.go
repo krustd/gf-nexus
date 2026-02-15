@@ -10,8 +10,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/krustd/nexus-sdk/registry"
-	"github.com/krustd/nexus-sdk/registry/etcd"
+	"github.com/krustd/nexus-registry/registry"
+	"github.com/krustd/nexus-registry/registry/etcd"
 )
 
 var currentInstance *registry.ServiceInstance

@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/krustd/nexus-sdk/registry"
+	"github.com/krustd/nexus-registry/registry"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

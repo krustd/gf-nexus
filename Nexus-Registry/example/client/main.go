@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	nexus "github.com/krustd/nexus-sdk"
-	"github.com/krustd/nexus-sdk/registry"
-	"github.com/krustd/nexus-sdk/registry/balancer"
+	nexus "github.com/krustd/nexus-registry"
+	"github.com/krustd/nexus-registry/registry"
+	"github.com/krustd/nexus-registry/registry/balancer"
 )
 
 func main() {
