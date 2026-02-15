@@ -1,0 +1,45 @@
+# ============================================================
+# Nexus SDK 配置文件
+# 每个微服务在自己的 config/ 目录下放一份
+# ============================================================
+
+[nexus.registry]
+# etcd 集群地址
+endpoints = ["127.0.0.1:2379"]
+
+# 连接超时（秒）
+dial_timeout = 5
+
+# 服务租约 TTL（秒）
+# 实例超过这个时间没续租就会被 etcd 自动摘除
+lease_ttl = 15
+
+# etcd key 前缀
+prefix = "/nexus/services"
+
+# etcd 认证（可选，不需要就删掉或留空）
+# username = "root"
+# password = "123456"
+
+
+[nexus.service]
+# 服务名称（所有实例共用同一个 name）
+name = "user-service"
+
+# 版本号
+version = "v1.0.0"
+
+# 协议：http 或 grpc
+protocol = "http"
+
+# 当前实例的监听地址
+# 注意：这里填的是其他服务能访问到的地址，不要填 0.0.0.0
+address = "10.0.0.1:8080"
+
+# 负载均衡权重，越大流量越多
+weight = 10
+
+# 自定义元数据（可选）
+[nexus.service.metadata]
+region = "ap-northeast-1"
+env    = "production"
