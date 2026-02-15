@@ -13,11 +13,13 @@ type Picker interface {
 }
 
 // Resolver 服务解析器：本地缓存 + 后台 Watch + 负载均衡
+// 依赖 Registry 接口，不绑定任何具体实现
 type Resolver struct {
-	registry    *Registry
+	registry    Registry // ← 接口，不是具体 struct
 	serviceName string
 	protocol    Protocol
 	picker      Picker
+	prefix      string // 用于 Watch 删除事件的 key 匹配
 
 	mu        sync.RWMutex
 	instances []*ServiceInstance
@@ -28,21 +30,24 @@ type Resolver struct {
 // ResolverOption 配置选项
 type ResolverOption func(*Resolver)
 
-// WithProtocol 按协议过滤
 func WithProtocol(p Protocol) ResolverOption {
 	return func(r *Resolver) { r.protocol = p }
 }
 
-// WithPicker 设置负载均衡策略
 func WithPicker(p Picker) ResolverOption {
 	return func(r *Resolver) { r.picker = p }
 }
 
+func WithPrefix(prefix string) ResolverOption {
+	return func(r *Resolver) { r.prefix = prefix }
+}
+
 // NewResolver 创建并启动 Resolver
-func NewResolver(reg *Registry, serviceName string, opts ...ResolverOption) (*Resolver, error) {
+func NewResolver(reg Registry, serviceName string, opts ...ResolverOption) (*Resolver, error) {
 	r := &Resolver{
 		registry:    reg,
 		serviceName: serviceName,
+		prefix:      "/nexus/services", // 默认值
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -72,7 +77,7 @@ func NewResolver(reg *Registry, serviceName string, opts ...ResolverOption) (*Re
 	return r, nil
 }
 
-// Resolve 获取一个实例（经过负载均衡）
+// Resolve 获取一个实例
 func (r *Resolver) Resolve() (*ServiceInstance, error) {
 	r.mu.RLock()
 	instances := r.instances
@@ -144,7 +149,7 @@ func (r *Resolver) handleEvent(ev WatchEvent) {
 		}
 		for i, inst := range r.instances {
 			if inst.ID == ev.Instance.ID ||
-				inst.BuildKey(r.registry.config.Prefix) == ev.Instance.ID {
+				inst.BuildKey(r.prefix) == ev.Instance.ID {
 				r.instances = append(r.instances[:i], r.instances[i+1:]...)
 				break
 			}

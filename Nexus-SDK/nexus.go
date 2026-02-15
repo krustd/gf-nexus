@@ -1,13 +1,12 @@
 // Package nexus 是 Nexus 微服务 SDK 的顶层入口。
 //
-// 业务方只需要一行代码即可完成服务注册：
+// 业务方只需要：
 //
 //	nexus.MustSetup("config/config.toml")
-//
-// 优雅退出：
-//
 //	defer nexus.Shutdown()
-package Nexus_SDK
+//
+// 底层注册中心实现（etcd/consul/nacos）对业务方完全透明。
+package nexus
 
 import (
 	"context"
@@ -16,57 +15,44 @@ import (
 	"time"
 
 	"github.com/krustd/nexus-sdk/registry"
+	"github.com/krustd/nexus-sdk/registry/etcd"
 )
 
-// instance 记录当前注册的服务实例，用于 Shutdown 时反注册
 var currentInstance *registry.ServiceInstance
 
 // ================================================================
-// 一行注册 API
+// 一行注册
 // ================================================================
 
-// Setup 从 TOML 配置文件初始化注册中心并注册当前服务。
-//
-//	err := nexus.Setup("config/config.toml")
+// Setup 从 TOML 配置文件初始化并注册当前服务
 func Setup(configPath string) error {
-	// 1. 加载配置
 	conf, err := registry.LoadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("nexus: load config: %w", err)
 	}
 
-	// 2. 创建 Registry
-	reg, err := registry.New(&conf.Registry)
+	// ★ 这里是唯一绑定具体实现的地方
+	// 将来换 consul/nacos，只改这一行
+	reg, err := etcd.New(&conf.Registry)
 	if err != nil {
 		return fmt.Errorf("nexus: create registry: %w", err)
 	}
 	registry.SetGlobal(reg)
 
-	// 3. 构建 ServiceInstance
 	instance := conf.Service.ToInstance()
-
-	// 4. 注册
 	ctx, cancel := context.WithTimeout(context.Background(), conf.Registry.DialTimeout())
 	defer cancel()
 
 	if err := reg.Register(ctx, instance); err != nil {
-		return fmt.Errorf("nexus: register service: %w", err)
+		return fmt.Errorf("nexus: register: %w", err)
 	}
 
 	currentInstance = instance
-	log.Printf("[nexus] ✅ service registered: %s (%s) at %s",
-		instance.Name, instance.Protocol, instance.Address)
-
+	log.Printf("[nexus] ✅ %s (%s) at %s", instance.Name, instance.Protocol, instance.Address)
 	return nil
 }
 
-// MustSetup 同 Setup，失败直接 panic（适合在 main 中使用）
-//
-//	func main() {
-//	    nexus.MustSetup("config/config.toml")
-//	    defer nexus.Shutdown()
-//	    // ... 启动 gf server
-//	}
+// MustSetup 同 Setup，失败 panic
 func MustSetup(configPath string) {
 	if err := Setup(configPath); err != nil {
 		panic(err)
@@ -74,23 +60,17 @@ func MustSetup(configPath string) {
 }
 
 // ================================================================
-// 同时注册多协议（HTTP + gRPC 同服务）
+// 双协议注册
 // ================================================================
 
-// SetupMulti 从配置文件加载，并注册多个自定义实例。
-// 适用于一个进程同时暴露 HTTP + gRPC 的场景。
-//
-//	nexus.MustSetupMulti("config/config.toml",
-//	    &registry.ServiceInstance{Name: "user-svc", Protocol: registry.ProtocolHTTP, Address: ":8080"},
-//	    &registry.ServiceInstance{Name: "user-svc", Protocol: registry.ProtocolGRPC, Address: ":9090"},
-//	)
+// SetupMulti 注册多个实例（HTTP + gRPC 同服务场景）
 func SetupMulti(configPath string, instances ...*registry.ServiceInstance) error {
 	conf, err := registry.LoadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("nexus: load config: %w", err)
 	}
 
-	reg, err := registry.New(&conf.Registry)
+	reg, err := etcd.New(&conf.Registry)
 	if err != nil {
 		return fmt.Errorf("nexus: create registry: %w", err)
 	}
@@ -104,7 +84,6 @@ func SetupMulti(configPath string, instances ...*registry.ServiceInstance) error
 			return fmt.Errorf("nexus: register %s: %w", inst.ID, err)
 		}
 	}
-
 	log.Printf("[nexus] ✅ %d instances registered", len(instances))
 	return nil
 }
@@ -117,19 +96,17 @@ func MustSetupMulti(configPath string, instances ...*registry.ServiceInstance) {
 }
 
 // ================================================================
-// 服务发现快捷方法
+// 发现快捷方法
 // ================================================================
 
-// Discover 发现某个服务的所有实例
 func Discover(serviceName string) ([]*registry.ServiceInstance, error) {
 	reg := registry.GetGlobal()
 	if reg == nil {
-		return nil, fmt.Errorf("nexus: not initialized, call Setup first")
+		return nil, fmt.Errorf("nexus: not initialized")
 	}
 	return reg.Discover(context.Background(), serviceName)
 }
 
-// DiscoverHTTP 发现 HTTP 实例
 func DiscoverHTTP(serviceName string) ([]*registry.ServiceInstance, error) {
 	reg := registry.GetGlobal()
 	if reg == nil {
@@ -138,7 +115,6 @@ func DiscoverHTTP(serviceName string) ([]*registry.ServiceInstance, error) {
 	return reg.DiscoverByProtocol(context.Background(), serviceName, registry.ProtocolHTTP)
 }
 
-// DiscoverGRPC 发现 gRPC 实例
 func DiscoverGRPC(serviceName string) ([]*registry.ServiceInstance, error) {
 	reg := registry.GetGlobal()
 	if reg == nil {
@@ -151,7 +127,7 @@ func DiscoverGRPC(serviceName string) ([]*registry.ServiceInstance, error) {
 // 生命周期
 // ================================================================
 
-// Shutdown 优雅关闭：反注册当前服务 + 关闭 etcd 连接
+// Shutdown 反注册 + 关闭连接
 func Shutdown() {
 	reg := registry.GetGlobal()
 	if reg == nil {
@@ -161,7 +137,6 @@ func Shutdown() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 反注册当前实例
 	if currentInstance != nil {
 		if err := reg.Deregister(ctx, currentInstance); err != nil {
 			log.Printf("[nexus] deregister failed: %v", err)
@@ -175,7 +150,7 @@ func Shutdown() {
 	log.Println("[nexus] shutdown complete")
 }
 
-// GetRegistry 获取底层 Registry 实例（高级用法）
-func GetRegistry() *registry.Registry {
+// GetRegistry 获取底层 Registry 接口（高级用法）
+func GetRegistry() registry.Registry {
 	return registry.GetGlobal()
 }
