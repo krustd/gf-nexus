@@ -19,10 +19,9 @@ type EtcdRegistry struct {
 	registered map[string]clientv3.LeaseID
 }
 
-// 编译期确保实现了接口
+// 编译期检查：确保实现了 Registry 接口
 var _ registry.Registry = (*EtcdRegistry)(nil)
 
-// New 创建 etcd 注册中心
 func New(conf *registry.Config) (*EtcdRegistry, error) {
 	if conf == nil {
 		conf = registry.DefaultConfig()

@@ -1,11 +1,7 @@
 // Package nexus 是 Nexus 微服务 SDK 的顶层入口。
 //
-// 业务方只需要：
-//
 //	nexus.MustSetup("config/config.toml")
 //	defer nexus.Shutdown()
-//
-// 底层注册中心实现（etcd/consul/nacos）对业务方完全透明。
 package nexus
 
 import (
@@ -20,10 +16,6 @@ import (
 
 var currentInstance *registry.ServiceInstance
 
-// ================================================================
-// 一行注册
-// ================================================================
-
 // Setup 从 TOML 配置文件初始化并注册当前服务
 func Setup(configPath string) error {
 	conf, err := registry.LoadConfig(configPath)
@@ -31,8 +23,7 @@ func Setup(configPath string) error {
 		return fmt.Errorf("nexus: load config: %w", err)
 	}
 
-	// ★ 这里是唯一绑定具体实现的地方
-	// 将来换 consul/nacos，只改这一行
+	// ★ 唯一绑定具体实现的地方，将来换 consul 只改这一行
 	reg, err := etcd.New(&conf.Registry)
 	if err != nil {
 		return fmt.Errorf("nexus: create registry: %w", err)
@@ -58,10 +49,6 @@ func MustSetup(configPath string) {
 		panic(err)
 	}
 }
-
-// ================================================================
-// 双协议注册
-// ================================================================
 
 // SetupMulti 注册多个实例（HTTP + gRPC 同服务场景）
 func SetupMulti(configPath string, instances ...*registry.ServiceInstance) error {
@@ -95,10 +82,7 @@ func MustSetupMulti(configPath string, instances ...*registry.ServiceInstance) {
 	}
 }
 
-// ================================================================
-// 发现快捷方法
-// ================================================================
-
+// Discover 发现某个服务的所有实例
 func Discover(serviceName string) ([]*registry.ServiceInstance, error) {
 	reg := registry.GetGlobal()
 	if reg == nil {
@@ -107,6 +91,7 @@ func Discover(serviceName string) ([]*registry.ServiceInstance, error) {
 	return reg.Discover(context.Background(), serviceName)
 }
 
+// DiscoverHTTP 发现 HTTP 实例
 func DiscoverHTTP(serviceName string) ([]*registry.ServiceInstance, error) {
 	reg := registry.GetGlobal()
 	if reg == nil {
@@ -115,6 +100,7 @@ func DiscoverHTTP(serviceName string) ([]*registry.ServiceInstance, error) {
 	return reg.DiscoverByProtocol(context.Background(), serviceName, registry.ProtocolHTTP)
 }
 
+// DiscoverGRPC 发现 gRPC 实例
 func DiscoverGRPC(serviceName string) ([]*registry.ServiceInstance, error) {
 	reg := registry.GetGlobal()
 	if reg == nil {
@@ -122,10 +108,6 @@ func DiscoverGRPC(serviceName string) ([]*registry.ServiceInstance, error) {
 	}
 	return reg.DiscoverByProtocol(context.Background(), serviceName, registry.ProtocolGRPC)
 }
-
-// ================================================================
-// 生命周期
-// ================================================================
 
 // Shutdown 反注册 + 关闭连接
 func Shutdown() {
@@ -150,7 +132,7 @@ func Shutdown() {
 	log.Println("[nexus] shutdown complete")
 }
 
-// GetRegistry 获取底层 Registry 接口（高级用法）
+// GetRegistry 获取底层 Registry 接口
 func GetRegistry() registry.Registry {
 	return registry.GetGlobal()
 }

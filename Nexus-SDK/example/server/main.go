@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-	// ✅ 业务方代码 —— 无论底层是 etcd / consul / nacos，这里永远不用改
 	nexus.MustSetup("config/config.toml")
 	defer nexus.Shutdown()
 

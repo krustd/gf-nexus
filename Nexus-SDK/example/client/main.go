@@ -13,8 +13,8 @@ func main() {
 	nexus.MustSetup("config/config.toml")
 	defer nexus.Shutdown()
 
-	// Resolver 依赖的是 registry.Registry 接口
-	// 底层换实现，这里零改动
+	// nexus.GetRegistry() 返回的是 registry.Registry 接口
+	// 直接传给 NewResolver 即可
 	resolver, err := registry.NewResolver(
 		nexus.GetRegistry(),
 		"user-service",

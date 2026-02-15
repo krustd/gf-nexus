@@ -7,27 +7,22 @@ import (
 	"sync"
 )
 
-// Picker 负载均衡选择器接口
 type Picker interface {
 	Pick(instances []*ServiceInstance) (*ServiceInstance, error)
 }
 
-// Resolver 服务解析器：本地缓存 + 后台 Watch + 负载均衡
-// 依赖 Registry 接口，不绑定任何具体实现
 type Resolver struct {
-	registry    Registry // ← 接口，不是具体 struct
+	registry    Registry // ← 接口
 	serviceName string
 	protocol    Protocol
 	picker      Picker
-	prefix      string // 用于 Watch 删除事件的 key 匹配
+	prefix      string
 
 	mu        sync.RWMutex
 	instances []*ServiceInstance
-
-	cancel context.CancelFunc
+	cancel    context.CancelFunc
 }
 
-// ResolverOption 配置选项
 type ResolverOption func(*Resolver)
 
 func WithProtocol(p Protocol) ResolverOption {
@@ -42,12 +37,12 @@ func WithPrefix(prefix string) ResolverOption {
 	return func(r *Resolver) { r.prefix = prefix }
 }
 
-// NewResolver 创建并启动 Resolver
+// NewResolver 参数是 Registry 接口，不是具体 struct
 func NewResolver(reg Registry, serviceName string, opts ...ResolverOption) (*Resolver, error) {
 	r := &Resolver{
 		registry:    reg,
 		serviceName: serviceName,
-		prefix:      "/nexus/services", // 默认值
+		prefix:      "/nexus/services",
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -56,8 +51,7 @@ func NewResolver(reg Registry, serviceName string, opts ...ResolverOption) (*Res
 		return nil, fmt.Errorf("nexus: resolver requires a picker")
 	}
 
-	ctx := context.Background()
-	instances, err := r.fetchInstances(ctx)
+	instances, err := r.fetchInstances(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("nexus: initial discover: %w", err)
 	}
@@ -77,7 +71,6 @@ func NewResolver(reg Registry, serviceName string, opts ...ResolverOption) (*Res
 	return r, nil
 }
 
-// Resolve 获取一个实例
 func (r *Resolver) Resolve() (*ServiceInstance, error) {
 	r.mu.RLock()
 	instances := r.instances
@@ -88,7 +81,6 @@ func (r *Resolver) Resolve() (*ServiceInstance, error) {
 	return r.picker.Pick(instances)
 }
 
-// GetInstances 获取所有缓存实例
 func (r *Resolver) GetInstances() []*ServiceInstance {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -97,7 +89,6 @@ func (r *Resolver) GetInstances() []*ServiceInstance {
 	return cp
 }
 
-// Close 停止 Watch
 func (r *Resolver) Close() {
 	if r.cancel != nil {
 		r.cancel()

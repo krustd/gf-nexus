@@ -9,19 +9,13 @@ import (
 	"github.com/krustd/nexus-sdk/registry"
 )
 
-// ErrNoInstance 没有可用实例
 var ErrNoInstance = fmt.Errorf("nexus: no available instance")
 
 // ==================== Round Robin ====================
 
-type roundRobin struct {
-	counter uint64
-}
+type roundRobin struct{ counter uint64 }
 
-// NewRoundRobin 轮询
-func NewRoundRobin() registry.Picker {
-	return &roundRobin{}
-}
+func NewRoundRobin() registry.Picker { return &roundRobin{} }
 
 func (rr *roundRobin) Pick(instances []*registry.ServiceInstance) (*registry.ServiceInstance, error) {
 	n := len(instances)
@@ -36,10 +30,7 @@ func (rr *roundRobin) Pick(instances []*registry.ServiceInstance) (*registry.Ser
 
 type random struct{}
 
-// NewRandom 随机
-func NewRandom() registry.Picker {
-	return &random{}
-}
+func NewRandom() registry.Picker { return &random{} }
 
 func (r *random) Pick(instances []*registry.ServiceInstance) (*registry.ServiceInstance, error) {
 	n := len(instances)
@@ -49,8 +40,7 @@ func (r *random) Pick(instances []*registry.ServiceInstance) (*registry.ServiceI
 	return instances[rand.Intn(n)], nil
 }
 
-// ==================== Weighted Round Robin ====================
-// Nginx 平滑加权轮询算法
+// ==================== Weighted Round Robin (Nginx 平滑加权) ====================
 
 type weightedNode struct {
 	instance      *registry.ServiceInstance
@@ -64,14 +54,10 @@ type weightedRoundRobin struct {
 	fingerprint string
 }
 
-// NewWeightedRoundRobin 加权轮询
-func NewWeightedRoundRobin() registry.Picker {
-	return &weightedRoundRobin{}
-}
+func NewWeightedRoundRobin() registry.Picker { return &weightedRoundRobin{} }
 
 func (w *weightedRoundRobin) Pick(instances []*registry.ServiceInstance) (*registry.ServiceInstance, error) {
-	n := len(instances)
-	if n == 0 {
+	if len(instances) == 0 {
 		return nil, ErrNoInstance
 	}
 

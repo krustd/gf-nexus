@@ -7,25 +7,25 @@ import (
 )
 
 var (
-	globalRegistry Registry
+	globalRegistry Registry // ← 接口类型，不是 *Registry
 	globalMu       sync.RWMutex
 )
 
-// SetGlobal 设置全局注册中心
+// SetGlobal 设置全局注册中心（传入接口值）
 func SetGlobal(r Registry) {
 	globalMu.Lock()
 	globalRegistry = r
 	globalMu.Unlock()
 }
 
-// GetGlobal 获取全局注册中心
+// GetGlobal 获取全局注册中心（返回接口值）
 func GetGlobal() Registry {
 	globalMu.RLock()
 	defer globalMu.RUnlock()
 	return globalRegistry
 }
 
-// Shutdown 优雅关闭全局注册中心
+// Shutdown 关闭全局注册中心
 func Shutdown() error {
 	globalMu.Lock()
 	reg := globalRegistry
