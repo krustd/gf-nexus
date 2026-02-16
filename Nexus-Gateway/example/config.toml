@@ -1,0 +1,51 @@
+[gateway]
+
+[gateway.registry]
+endpoints    = ["127.0.0.1:2379"]
+dial_timeout = 5
+prefix       = "/nexus/services"
+
+[gateway.server]
+addr = ":8080"
+
+[gateway.balancer]
+strategy = "round_robin"    # round_robin / random / weighted_round_robin
+
+[gateway.jwt]
+enabled    = true
+secret     = "your-secret-key-here"
+algorithm  = "HS256"
+skip_paths = ["/health", "/metrics"]
+
+[gateway.ip_filter]
+enabled   = false
+mode      = "blacklist"     # blacklist / whitelist
+addresses = []
+
+[gateway.rate_limit]
+enabled = true
+rate    = 1000.0            # tokens per second
+burst   = 2000              # bucket capacity
+
+[gateway.circuit]
+enabled         = true
+error_threshold = 0.5       # 50% error rate triggers circuit
+min_requests    = 20        # minimum requests before evaluation
+window_sec      = 30        # sliding window
+cooldown_sec    = 15        # how long to stay open
+
+[gateway.timeout]
+connect_ms  = 3000          # connection timeout
+response_ms = 10000         # response timeout
+
+[gateway.cors]
+enabled           = true
+allow_origins     = ["*"]
+allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+allow_headers     = ["Content-Type", "Authorization", "X-Request-Id"]
+allow_credentials = false
+max_age_sec       = 3600
+
+[gateway.metrics]
+enabled = true
+path    = "/metrics"
