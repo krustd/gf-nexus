@@ -16,10 +16,11 @@ import (
 
 // Gateway API 网关核心
 type Gateway struct {
-	config *config.GatewayConfig
-	pool   *ResolverPool
-	reg    registry.Registry
-	server *ghttp.Server
+	config    *config.GatewayConfig
+	pool      *ResolverPool
+	reg       registry.Registry
+	server    *ghttp.Server
+	grpcProxy *GRPCProxy
 }
 
 func New(cfg *config.GatewayConfig, reg registry.Registry) (*Gateway, error) {
@@ -64,7 +65,8 @@ func (gw *Gateway) Start() {
 	}
 
 	// 泛化调用路由
-	proxy := NewProxyHandler(gw.pool, gw.config.Timeout)
+	gw.grpcProxy = NewGRPCProxy(gw.config.GRPC)
+	proxy := NewProxyHandler(gw.pool, gw.config.Timeout, gw.grpcProxy)
 	cb := middleware.NewCircuitBreakerManager(gw.config.Circuit)
 
 	s.BindHandler("ALL:/api/:service/*method", func(r *ghttp.Request) {
@@ -95,6 +97,9 @@ func (gw *Gateway) Start() {
 
 // Shutdown 优雅关闭
 func (gw *Gateway) Shutdown() {
+	if gw.grpcProxy != nil {
+		gw.grpcProxy.Close()
+	}
 	gw.pool.Close()
 	if gw.reg != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

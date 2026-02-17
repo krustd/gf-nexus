@@ -18,6 +18,7 @@ type GatewayConfig struct {
 	Timeout   TimeoutConfig   `toml:"timeout"`
 	CORS      CORSConfig      `toml:"cors"`
 	Metrics   MetricsConfig   `toml:"metrics"`
+	GRPC      GRPCConfig      `toml:"grpc"`
 }
 
 type RegistryConfig struct {
@@ -81,6 +82,12 @@ type CORSConfig struct {
 type MetricsConfig struct {
 	Enabled bool   `toml:"enabled"`
 	Path    string `toml:"path"`
+}
+
+type GRPCConfig struct {
+	ReflectionCacheTTLSec int `toml:"reflection_cache_ttl_sec"`
+	ConnectTimeoutMs      int `toml:"connect_timeout_ms"`
+	RequestTimeoutMs      int `toml:"request_timeout_ms"`
 }
 
 type tomlRoot struct {
@@ -175,5 +182,16 @@ func applyDefaults(cfg *GatewayConfig) {
 	// Metrics
 	if cfg.Metrics.Path == "" {
 		cfg.Metrics.Path = "/metrics"
+	}
+
+	// GRPC
+	if cfg.GRPC.ReflectionCacheTTLSec <= 0 {
+		cfg.GRPC.ReflectionCacheTTLSec = 300
+	}
+	if cfg.GRPC.ConnectTimeoutMs <= 0 {
+		cfg.GRPC.ConnectTimeoutMs = 3000
+	}
+	if cfg.GRPC.RequestTimeoutMs <= 0 {
+		cfg.GRPC.RequestTimeoutMs = 10000
 	}
 }

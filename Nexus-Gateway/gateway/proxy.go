@@ -12,15 +12,17 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	"github.com/krustd/nexus-gateway/config"
+	"github.com/krustd/nexus-registry/registry"
 )
 
 // ProxyHandler 泛化调用反向代理
 type ProxyHandler struct {
 	pool       *ResolverPool
 	httpClient *http.Client
+	grpcProxy  *GRPCProxy
 }
 
-func NewProxyHandler(pool *ResolverPool, cfg config.TimeoutConfig) *ProxyHandler {
+func NewProxyHandler(pool *ResolverPool, cfg config.TimeoutConfig, grpcProxy *GRPCProxy) *ProxyHandler {
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout: time.Duration(cfg.ConnectMs) * time.Millisecond,
@@ -36,6 +38,7 @@ func NewProxyHandler(pool *ResolverPool, cfg config.TimeoutConfig) *ProxyHandler
 	return &ProxyHandler{
 		pool:       pool,
 		httpClient: client,
+		grpcProxy:  grpcProxy,
 	}
 }
 
@@ -69,7 +72,13 @@ func (p *ProxyHandler) Handle(r *ghttp.Request) {
 		return
 	}
 
-	// 2. 构建目标 URL
+	// 按协议分发
+	if instance.Protocol == registry.ProtocolGRPC {
+		p.grpcProxy.Handle(r, instance.Address, method)
+		return
+	}
+
+	// 2. 构建目标 URL（HTTP）
 	targetURL := fmt.Sprintf("http://%s/%s", instance.Address, method)
 	if r.URL.RawQuery != "" {
 		targetURL += "?" + r.URL.RawQuery

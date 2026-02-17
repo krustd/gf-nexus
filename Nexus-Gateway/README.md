@@ -40,28 +40,28 @@ POST /api/order-service/v1/orders
 
 ### 2. 安全与访问控制
 
-| 功能 | 说明 |
-|------|------|
-| **JWT 鉴权** | 校验 Bearer Token（HS256/RS256），提取 user_id 和 role |
-| **身份透传** | 校验通过后注入 `X-User-Id`、`X-User-Role` 到下游请求头 |
-| **IP 黑白名单** | 支持精确 IP 和 CIDR 网段匹配 |
-| **CORS** | 统一处理跨域，OPTIONS 预检直接返回 204 |
+| 功能            | 说明                                                   |
+| --------------- | ------------------------------------------------------ |
+| **JWT 鉴权**    | 校验 Bearer Token（HS256/RS256），提取 user_id 和 role |
+| **身份透传**    | 校验通过后注入 `X-User-Id`、`X-User-Role` 到下游请求头 |
+| **IP 黑白名单** | 支持精确 IP 和 CIDR 网段匹配                           |
+| **CORS**        | 统一处理跨域，OPTIONS 预检直接返回 204                 |
 
 ### 3. 韧性与稳定性
 
-| 功能 | 说明 |
-|------|------|
-| **限流** | 令牌桶算法，配置 QPS 和突发容量 |
-| **熔断** | 按服务名独立熔断，滑动窗口统计错误率，支持 closed → open → half-open 状态转换 |
-| **超时控制** | 连接超时 + 响应超时，独立配置 |
+| 功能         | 说明                                                                          |
+| ------------ | ----------------------------------------------------------------------------- |
+| **限流**     | 令牌桶算法，配置 QPS 和突发容量                                               |
+| **熔断**     | 按服务名独立熔断，滑动窗口统计错误率，支持 closed → open → half-open 状态转换 |
+| **超时控制** | 连接超时 + 响应超时，独立配置                                                 |
 
 ### 4. 可观测性
 
-| 功能 | 说明 |
-|------|------|
-| **Trace** | 生成/传递 `X-Trace-Id`，注入 Context |
-| **Request ID** | 生成/传递 `X-Request-Id` |
-| **请求日志** | 记录 method、path、status、latency、client_ip、trace_id |
+| 功能                | 说明                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| **Trace**           | 生成/传递 `X-Trace-Id`，注入 Context                                                          |
+| **Request ID**      | 生成/传递 `X-Request-Id`                                                                      |
+| **请求日志**        | 记录 method、path、status、latency、client_ip、trace_id                                       |
 | **Prometheus 指标** | `gateway_requests_total`、`gateway_request_duration_seconds`、`gateway_circuit_breaker_state` |
 
 ## 快速开始
@@ -183,15 +183,15 @@ curl http://localhost:8080/metrics
 }
 ```
 
-| 错误码 | 含义 | HTTP 状态码 |
-|--------|------|-------------|
-| 1001 | JWT 校验失败 | 401 |
-| 1002 | IP 被拦截 | 403 |
-| 1003 | 限流 | 429 |
-| 1004 | 熔断 | 503 |
-| 1005 | 服务未找到 | 502 |
-| 1006 | 后端超时 | 504 |
-| 1007 | 后端错误 | 502 |
+| 错误码 | 含义         | HTTP 状态码 |
+| ------ | ------------ | ----------- |
+| 1001   | JWT 校验失败 | 401         |
+| 1002   | IP 被拦截    | 403         |
+| 1003   | 限流         | 429         |
+| 1004   | 熔断         | 503         |
+| 1005   | 服务未找到   | 502         |
+| 1006   | 后端超时     | 504         |
+| 1007   | 后端错误     | 502         |
 
 ## 目录结构
 
@@ -229,3 +229,4 @@ Nexus-Gateway/
 - [GoFrame v2](https://github.com/gogf/gf) - HTTP 服务框架
 - [golang-jwt](https://github.com/golang-jwt/jwt) - JWT 解析
 - [Prometheus Client](https://github.com/prometheus/client_golang) - 指标采集
+

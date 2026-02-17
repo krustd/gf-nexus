@@ -44,7 +44,6 @@ func (p *ResolverPool) GetOrCreate(serviceName string) (*registry.Resolver, erro
 		p.reg,
 		serviceName,
 		registry.WithPicker(p.picker()),
-		registry.WithProtocol(registry.ProtocolHTTP),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("nexus-gateway: create resolver for %s: %w", serviceName, err)
