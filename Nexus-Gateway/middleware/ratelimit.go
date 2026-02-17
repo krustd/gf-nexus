@@ -10,7 +10,7 @@ import (
 	"github.com/krustd/nexus-gateway/internal"
 )
 
-// tokenBucket 令牌桶限流器
+// tokenBucket 令牌桶限流器，支持动态调整 rate 和 capacity
 type tokenBucket struct {
 	mu       sync.Mutex
 	tokens   float64
@@ -19,12 +19,19 @@ type tokenBucket struct {
 	lastTime time.Time
 }
 
-func (tb *tokenBucket) Allow() bool {
+func (tb *tokenBucket) allow(rate float64, capacity float64) bool {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
 
 	now := time.Now()
 	elapsed := now.Sub(tb.lastTime).Seconds()
+
+	// 动态更新 rate 和 capacity
+	tb.rate = rate
+	if capacity != tb.capacity {
+		tb.capacity = capacity
+	}
+
 	tb.tokens += elapsed * tb.rate
 	if tb.tokens > tb.capacity {
 		tb.tokens = tb.capacity
@@ -38,21 +45,31 @@ func (tb *tokenBucket) Allow() bool {
 	return false
 }
 
-// RateLimit 全局令牌桶限流中间件
-func RateLimit(cfg config.RateLimitConfig) ghttp.HandlerFunc {
-	if !cfg.Enabled {
-		return passthrough
-	}
-
+// RateLimit 全局令牌桶限流中间件（动态读取配置）
+func RateLimit(holder *config.DynamicConfigHolder) ghttp.HandlerFunc {
 	bucket := &tokenBucket{
-		tokens:   float64(cfg.Burst),
-		capacity: float64(cfg.Burst),
-		rate:     cfg.Rate,
+		tokens:   2000,
+		capacity: 2000,
+		rate:     1000,
 		lastTime: time.Now(),
 	}
 
+	// 用首次加载的配置初始化
+	if cfg := holder.Load(); cfg != nil {
+		bucket.tokens = float64(cfg.RateLimit.Burst)
+		bucket.capacity = float64(cfg.RateLimit.Burst)
+		bucket.rate = cfg.RateLimit.Rate
+	}
+
 	return func(r *ghttp.Request) {
-		if !bucket.Allow() {
+		cfg := holder.Load().RateLimit
+
+		if !cfg.Enabled {
+			r.Middleware.Next()
+			return
+		}
+
+		if !bucket.allow(cfg.Rate, float64(cfg.Burst)) {
 			internal.GatewayError(r, internal.CodeRateLimited, "rate limit exceeded")
 			return
 		}

@@ -1,0 +1,73 @@
+# Nexus-Gateway 动态配置（存放在配置中心，支持热更新）
+# 通过配置中心 Admin API 发布到 namespace=nexus-gateway, key=gateway.yaml
+
+# ─── JWT 认证（非对称加密 + 密钥轮换）───
+jwt:
+  enabled: true
+  keys:
+    # 支持多个公钥同时有效，实现平滑密钥轮换
+    # 轮换步骤：
+    #   1. 添加新 kid 的公钥到此列表
+    #   2. 签发方切换到新私钥
+    #   3. 等待旧 token 过期后移除旧 kid
+    - kid: "key-2024-01"
+      algorithm: RS256          # RS256 或 EdDSA
+      public_key: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+        -----END PUBLIC KEY-----
+    # - kid: "key-2024-02"
+    #   algorithm: EdDSA
+    #   public_key: |
+    #     -----BEGIN PUBLIC KEY-----
+    #     MCowBQYDK2VwAyEA...
+    #     -----END PUBLIC KEY-----
+  skip_paths:
+    - /health
+    - /metrics
+
+# ─── IP 黑白名单 ───
+ip_filter:
+  enabled: false
+  mode: blacklist              # blacklist / whitelist
+  addresses: []
+  # addresses:
+  #   - "192.168.1.100"        # 精确 IP
+  #   - "10.0.0.0/8"           # CIDR 网段
+
+# ─── 限流 ───
+rate_limit:
+  enabled: true
+  rate: 1000.0                 # 每秒生成令牌数
+  burst: 2000                  # 令牌桶容量
+
+# ─── 熔断 ───
+circuit:
+  enabled: true
+  error_threshold: 0.5         # 50% 错误率触发熔断
+  min_requests: 20             # 最少请求数才评估
+  window_sec: 30               # 滑动窗口（秒）
+  cooldown_sec: 15             # 熔断冷却时间（秒）
+
+# ─── CORS 跨域 ───
+cors:
+  enabled: true
+  allow_origins:
+    - "*"
+  allow_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+    - PATCH
+  allow_headers:
+    - Content-Type
+    - Authorization
+    - X-Request-Id
+  allow_credentials: false
+  max_age_sec: 3600
+
+# ─── 负载均衡 ───
+balancer:
+  strategy: round_robin        # round_robin / random / weighted_round_robin

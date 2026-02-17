@@ -7,20 +7,17 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// GatewayConfig 本地 TOML 静态配置（启动时确定，极少变更）
 type GatewayConfig struct {
-	Registry  RegistryConfig  `toml:"registry"`
-	Server    ServerConfig    `toml:"server"`
-	Balancer  BalancerConfig  `toml:"balancer"`
-	JWT       JWTConfig       `toml:"jwt"`
-	IPFilter  IPFilterConfig  `toml:"ip_filter"`
-	RateLimit RateLimitConfig `toml:"rate_limit"`
-	Circuit   CircuitConfig   `toml:"circuit"`
-	Timeout   TimeoutConfig   `toml:"timeout"`
-	CORS      CORSConfig      `toml:"cors"`
-	Metrics   MetricsConfig   `toml:"metrics"`
-	GRPC      GRPCConfig      `toml:"grpc"`
+	Registry     RegistryConfig     `toml:"registry"`
+	Server       ServerConfig       `toml:"server"`
+	ConfigCenter ConfigCenterConfig `toml:"config_center"`
+	Timeout      TimeoutConfig      `toml:"timeout"`
+	Metrics      MetricsConfig      `toml:"metrics"`
+	GRPC         GRPCConfig         `toml:"grpc"`
 }
 
+// RegistryConfig etcd 注册中心连接（配置中心的前置依赖）
 type RegistryConfig struct {
 	Endpoints      []string `toml:"endpoints"`
 	DialTimeoutSec int      `toml:"dial_timeout"`
@@ -29,54 +26,24 @@ type RegistryConfig struct {
 	Password       string   `toml:"password,omitempty"`
 }
 
+// ServerConfig 服务监听地址
 type ServerConfig struct {
 	Addr string `toml:"addr"`
 }
 
-type BalancerConfig struct {
-	Strategy string `toml:"strategy"` // round_robin / random / weighted_round_robin
-}
-
-type JWTConfig struct {
-	Enabled   bool     `toml:"enabled"`
-	Secret    string   `toml:"secret"`
-	PublicKey string   `toml:"public_key"`
-	Algorithm string   `toml:"algorithm"` // HS256 / RS256
-	SkipPaths []string `toml:"skip_paths"`
-}
-
-type IPFilterConfig struct {
-	Enabled   bool     `toml:"enabled"`
-	Mode      string   `toml:"mode"` // whitelist / blacklist
-	Addresses []string `toml:"addresses"`
-}
-
-type RateLimitConfig struct {
-	Enabled bool    `toml:"enabled"`
-	Rate    float64 `toml:"rate"`  // tokens per second
-	Burst   int     `toml:"burst"` // bucket capacity
-}
-
-type CircuitConfig struct {
-	Enabled        bool    `toml:"enabled"`
-	ErrorThreshold float64 `toml:"error_threshold"` // 0.0 ~ 1.0
-	MinRequests    int     `toml:"min_requests"`
-	WindowSec      int     `toml:"window_sec"`
-	CooldownSec    int     `toml:"cooldown_sec"`
+// ConfigCenterConfig 配置中心 SDK 连接参数
+type ConfigCenterConfig struct {
+	ServerAddr  string `toml:"server_addr"`
+	Namespace   string `toml:"namespace"`
+	ConfigKey   string `toml:"config_key"`
+	ClientID    string `toml:"client_id"`
+	PollTimeout int    `toml:"poll_timeout"`
+	RetryDelay  int    `toml:"retry_delay"`
 }
 
 type TimeoutConfig struct {
 	ConnectMs  int `toml:"connect_ms"`
 	ResponseMs int `toml:"response_ms"`
-}
-
-type CORSConfig struct {
-	Enabled          bool     `toml:"enabled"`
-	AllowOrigins     []string `toml:"allow_origins"`
-	AllowMethods     []string `toml:"allow_methods"`
-	AllowHeaders     []string `toml:"allow_headers"`
-	AllowCredentials bool     `toml:"allow_credentials"`
-	MaxAgeSec        int      `toml:"max_age_sec"`
 }
 
 type MetricsConfig struct {
@@ -89,6 +56,67 @@ type GRPCConfig struct {
 	ConnectTimeoutMs      int `toml:"connect_timeout_ms"`
 	RequestTimeoutMs      int `toml:"request_timeout_ms"`
 }
+
+// ─── 动态配置（从配置中心获取，YAML 格式，支持热更新）───
+
+// DynamicConfig 放在配置中心的运行时配置
+type DynamicConfig struct {
+	JWT       JWTConfig       `yaml:"jwt"       json:"jwt"`
+	IPFilter  IPFilterConfig  `yaml:"ip_filter"  json:"ip_filter"`
+	RateLimit RateLimitConfig `yaml:"rate_limit" json:"rate_limit"`
+	Circuit   CircuitConfig   `yaml:"circuit"    json:"circuit"`
+	CORS      CORSConfig      `yaml:"cors"       json:"cors"`
+	Balancer  BalancerConfig  `yaml:"balancer"   json:"balancer"`
+}
+
+// JWTConfig 支持非对称加密 + JWKS 多密钥轮换
+type JWTConfig struct {
+	Enabled   bool      `yaml:"enabled"    json:"enabled"`
+	Keys      []JWKItem `yaml:"keys"       json:"keys"`
+	SkipPaths []string  `yaml:"skip_paths" json:"skip_paths"`
+}
+
+// JWKItem 单个公钥条目
+type JWKItem struct {
+	KID       string `yaml:"kid"        json:"kid"`        // Key ID，JWT header 中的 kid 字段
+	Algorithm string `yaml:"algorithm"  json:"algorithm"`  // RS256 / EdDSA
+	PublicKey string `yaml:"public_key" json:"public_key"` // PEM 编码的公钥
+}
+
+type IPFilterConfig struct {
+	Enabled   bool     `yaml:"enabled"   json:"enabled"`
+	Mode      string   `yaml:"mode"      json:"mode"` // whitelist / blacklist
+	Addresses []string `yaml:"addresses" json:"addresses"`
+}
+
+type RateLimitConfig struct {
+	Enabled bool    `yaml:"enabled" json:"enabled"`
+	Rate    float64 `yaml:"rate"    json:"rate"`  // tokens per second
+	Burst   int     `yaml:"burst"   json:"burst"` // bucket capacity
+}
+
+type CircuitConfig struct {
+	Enabled        bool    `yaml:"enabled"         json:"enabled"`
+	ErrorThreshold float64 `yaml:"error_threshold" json:"error_threshold"` // 0.0 ~ 1.0
+	MinRequests    int     `yaml:"min_requests"    json:"min_requests"`
+	WindowSec      int     `yaml:"window_sec"      json:"window_sec"`
+	CooldownSec    int     `yaml:"cooldown_sec"    json:"cooldown_sec"`
+}
+
+type CORSConfig struct {
+	Enabled          bool     `yaml:"enabled"           json:"enabled"`
+	AllowOrigins     []string `yaml:"allow_origins"     json:"allow_origins"`
+	AllowMethods     []string `yaml:"allow_methods"     json:"allow_methods"`
+	AllowHeaders     []string `yaml:"allow_headers"     json:"allow_headers"`
+	AllowCredentials bool     `yaml:"allow_credentials" json:"allow_credentials"`
+	MaxAgeSec        int      `yaml:"max_age_sec"       json:"max_age_sec"`
+}
+
+type BalancerConfig struct {
+	Strategy string `yaml:"strategy" json:"strategy"` // round_robin / random / weighted_round_robin
+}
+
+// ─── 加载 & 默认值 ───
 
 type tomlRoot struct {
 	Gateway GatewayConfig `toml:"gateway"`
@@ -125,17 +153,48 @@ func applyDefaults(cfg *GatewayConfig) {
 		cfg.Server.Addr = ":8080"
 	}
 
-	// Balancer
-	if cfg.Balancer.Strategy == "" {
-		cfg.Balancer.Strategy = "round_robin"
+	// ConfigCenter
+	if cfg.ConfigCenter.Namespace == "" {
+		cfg.ConfigCenter.Namespace = "nexus-gateway"
+	}
+	if cfg.ConfigCenter.ConfigKey == "" {
+		cfg.ConfigCenter.ConfigKey = "gateway.yaml"
+	}
+	if cfg.ConfigCenter.PollTimeout <= 0 {
+		cfg.ConfigCenter.PollTimeout = 30
+	}
+	if cfg.ConfigCenter.RetryDelay <= 0 {
+		cfg.ConfigCenter.RetryDelay = 5
 	}
 
-	// JWT
-	if cfg.JWT.Algorithm == "" {
-		cfg.JWT.Algorithm = "HS256"
+	// Timeout
+	if cfg.Timeout.ConnectMs <= 0 {
+		cfg.Timeout.ConnectMs = 3000
+	}
+	if cfg.Timeout.ResponseMs <= 0 {
+		cfg.Timeout.ResponseMs = 10000
 	}
 
-	// Rate Limit
+	// Metrics
+	if cfg.Metrics.Path == "" {
+		cfg.Metrics.Path = "/metrics"
+	}
+
+	// GRPC
+	if cfg.GRPC.ReflectionCacheTTLSec <= 0 {
+		cfg.GRPC.ReflectionCacheTTLSec = 300
+	}
+	if cfg.GRPC.ConnectTimeoutMs <= 0 {
+		cfg.GRPC.ConnectTimeoutMs = 3000
+	}
+	if cfg.GRPC.RequestTimeoutMs <= 0 {
+		cfg.GRPC.RequestTimeoutMs = 10000
+	}
+}
+
+// ApplyDynamicDefaults 为动态配置填充默认值
+func ApplyDynamicDefaults(cfg *DynamicConfig) {
+	// RateLimit
 	if cfg.RateLimit.Rate <= 0 {
 		cfg.RateLimit.Rate = 1000
 	}
@@ -157,14 +216,6 @@ func applyDefaults(cfg *GatewayConfig) {
 		cfg.Circuit.CooldownSec = 15
 	}
 
-	// Timeout
-	if cfg.Timeout.ConnectMs <= 0 {
-		cfg.Timeout.ConnectMs = 3000
-	}
-	if cfg.Timeout.ResponseMs <= 0 {
-		cfg.Timeout.ResponseMs = 10000
-	}
-
 	// CORS
 	if len(cfg.CORS.AllowOrigins) == 0 {
 		cfg.CORS.AllowOrigins = []string{"*"}
@@ -179,19 +230,8 @@ func applyDefaults(cfg *GatewayConfig) {
 		cfg.CORS.MaxAgeSec = 3600
 	}
 
-	// Metrics
-	if cfg.Metrics.Path == "" {
-		cfg.Metrics.Path = "/metrics"
-	}
-
-	// GRPC
-	if cfg.GRPC.ReflectionCacheTTLSec <= 0 {
-		cfg.GRPC.ReflectionCacheTTLSec = 300
-	}
-	if cfg.GRPC.ConnectTimeoutMs <= 0 {
-		cfg.GRPC.ConnectTimeoutMs = 3000
-	}
-	if cfg.GRPC.RequestTimeoutMs <= 0 {
-		cfg.GRPC.RequestTimeoutMs = 10000
+	// Balancer
+	if cfg.Balancer.Strategy == "" {
+		cfg.Balancer.Strategy = "round_robin"
 	}
 }

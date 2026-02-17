@@ -26,17 +26,17 @@ type serviceCircuit struct {
 	windowStart time.Time
 }
 
-// CircuitBreakerManager 按服务名管理熔断状态
+// CircuitBreakerManager 按服务名管理熔断状态（动态读取配置）
 type CircuitBreakerManager struct {
 	mu       sync.RWMutex
 	circuits map[string]*serviceCircuit
-	cfg      config.CircuitConfig
+	holder   *config.DynamicConfigHolder
 }
 
-func NewCircuitBreakerManager(cfg config.CircuitConfig) *CircuitBreakerManager {
+func NewCircuitBreakerManager(holder *config.DynamicConfigHolder) *CircuitBreakerManager {
 	return &CircuitBreakerManager{
 		circuits: make(map[string]*serviceCircuit),
-		cfg:      cfg,
+		holder:   holder,
 	}
 }
 
@@ -61,8 +61,18 @@ func (m *CircuitBreakerManager) getCircuit(serviceName string) *serviceCircuit {
 	return sc
 }
 
+func (m *CircuitBreakerManager) cfg() config.CircuitConfig {
+	return m.holder.Load().Circuit
+}
+
+// Enabled 返回熔断器是否启用
+func (m *CircuitBreakerManager) Enabled() bool {
+	return m.cfg().Enabled
+}
+
 // Allow 判断是否允许请求通过
 func (m *CircuitBreakerManager) Allow(serviceName string) bool {
+	cfg := m.cfg()
 	sc := m.getCircuit(serviceName)
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
@@ -72,7 +82,7 @@ func (m *CircuitBreakerManager) Allow(serviceName string) bool {
 		return true
 
 	case stateOpen:
-		cooldown := time.Duration(m.cfg.CooldownSec) * time.Second
+		cooldown := time.Duration(cfg.CooldownSec) * time.Second
 		if time.Since(sc.openedAt) >= cooldown {
 			// 冷却结束，进入半开状态
 			sc.state = stateHalfOpen
@@ -93,12 +103,13 @@ func (m *CircuitBreakerManager) Allow(serviceName string) bool {
 
 // RecordSuccess 记录成功请求
 func (m *CircuitBreakerManager) RecordSuccess(serviceName string) {
+	cfg := m.cfg()
 	sc := m.getCircuit(serviceName)
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	// 重置过期窗口（与 RecordFailure 保持一致）
-	window := time.Duration(m.cfg.WindowSec) * time.Second
+	// 重置过期窗口
+	window := time.Duration(cfg.WindowSec) * time.Second
 	if time.Since(sc.windowStart) > window {
 		sc.failures = 0
 		sc.total = 0
@@ -118,12 +129,13 @@ func (m *CircuitBreakerManager) RecordSuccess(serviceName string) {
 
 // RecordFailure 记录失败请求
 func (m *CircuitBreakerManager) RecordFailure(serviceName string) {
+	cfg := m.cfg()
 	sc := m.getCircuit(serviceName)
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
 	// 重置过期窗口
-	window := time.Duration(m.cfg.WindowSec) * time.Second
+	window := time.Duration(cfg.WindowSec) * time.Second
 	if time.Since(sc.windowStart) > window {
 		sc.failures = 0
 		sc.total = 0
@@ -141,9 +153,9 @@ func (m *CircuitBreakerManager) RecordFailure(serviceName string) {
 	}
 
 	// 关闭状态：检查是否需要熔断
-	if sc.total >= m.cfg.MinRequests {
+	if sc.total >= cfg.MinRequests {
 		errorRatio := float64(sc.failures) / float64(sc.total)
-		if errorRatio >= m.cfg.ErrorThreshold {
+		if errorRatio >= cfg.ErrorThreshold {
 			sc.state = stateOpen
 			sc.openedAt = time.Now()
 		}

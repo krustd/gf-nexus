@@ -11,27 +11,48 @@ import (
 	"github.com/krustd/nexus-gateway/metrics"
 	"github.com/krustd/nexus-gateway/middleware"
 	"github.com/krustd/nexus-registry/registry"
-	"github.com/krustd/nexus-registry/registry/balancer"
 )
 
 // Gateway API 网关核心
 type Gateway struct {
 	config    *config.GatewayConfig
+	holder    *config.DynamicConfigHolder
 	pool      *ResolverPool
 	reg       registry.Registry
 	server    *ghttp.Server
 	grpcProxy *GRPCProxy
+	keyMgr    *middleware.KeyManager
 }
 
-func New(cfg *config.GatewayConfig, reg registry.Registry) (*Gateway, error) {
-	pickerFactory := newPickerFactory(cfg.Balancer.Strategy)
+func New(cfg *config.GatewayConfig, holder *config.DynamicConfigHolder, reg registry.Registry) (*Gateway, error) {
+	dynCfg := holder.Load()
+	pickerFactory := newPickerFactory(dynCfg.Balancer.Strategy)
 	pool := NewResolverPool(reg, pickerFactory)
 
-	return &Gateway{
+	// 创建 JWT 密钥管理器
+	km := middleware.NewKeyManager()
+	km.UpdateKeys(dynCfg.JWT.Keys)
+
+	gw := &Gateway{
 		config: cfg,
+		holder: holder,
 		pool:   pool,
 		reg:    reg,
-	}, nil
+		keyMgr: km,
+	}
+
+	// 注册动态配置变更回调
+	holder.OnChange(func(newCfg *config.DynamicConfig) {
+		// 更新 JWT 密钥
+		km.UpdateKeys(newCfg.JWT.Keys)
+
+		// 更新负载均衡策略
+		if newCfg.Balancer.Strategy != "" {
+			pool.UpdateStrategy(newCfg.Balancer.Strategy)
+		}
+	})
+
+	return gw, nil
 }
 
 // Start 启动网关（阻塞）
@@ -45,10 +66,10 @@ func (gw *Gateway) Start() {
 		middleware.Trace(),
 		middleware.RequestID(),
 		middleware.Logging(),
-		middleware.CORS(gw.config.CORS),
-		middleware.IPFilter(gw.config.IPFilter),
-		middleware.RateLimit(gw.config.RateLimit),
-		middleware.JWT(gw.config.JWT),
+		middleware.CORS(gw.holder),
+		middleware.IPFilter(gw.holder),
+		middleware.RateLimit(gw.holder),
+		middleware.JWT(gw.holder, gw.keyMgr),
 	)
 
 	// 健康检查
@@ -67,13 +88,13 @@ func (gw *Gateway) Start() {
 	// 泛化调用路由
 	gw.grpcProxy = NewGRPCProxy(gw.config.GRPC)
 	proxy := NewProxyHandler(gw.pool, gw.config.Timeout, gw.grpcProxy)
-	cb := middleware.NewCircuitBreakerManager(gw.config.Circuit)
+	cb := middleware.NewCircuitBreakerManager(gw.holder)
 
 	s.BindHandler("ALL:/api/:service/*method", func(r *ghttp.Request) {
 		serviceName := r.GetRouter("service").String()
 
 		// 熔断检查
-		if gw.config.Circuit.Enabled && !cb.Allow(serviceName) {
+		if cb.Enabled() && !cb.Allow(serviceName) {
 			GatewayError(r, CodeCircuitOpen, "circuit breaker open for "+serviceName)
 			return
 		}
@@ -82,7 +103,7 @@ func (gw *Gateway) Start() {
 		proxy.Handle(r)
 
 		// 记录熔断指标
-		if gw.config.Circuit.Enabled {
+		if cb.Enabled() {
 			status := r.Response.Status
 			if status >= 500 {
 				cb.RecordFailure(serviceName)
@@ -105,18 +126,5 @@ func (gw *Gateway) Shutdown() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		gw.reg.Close(ctx)
-	}
-}
-
-func newPickerFactory(strategy string) func() registry.Picker {
-	return func() registry.Picker {
-		switch strategy {
-		case "random":
-			return balancer.NewRandom()
-		case "weighted_round_robin":
-			return balancer.NewWeightedRoundRobin()
-		default:
-			return balancer.NewRoundRobin()
-		}
 	}
 }

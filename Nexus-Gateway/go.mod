@@ -8,6 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.18.0
+	github.com/krustd/nexus-config v0.0.0
 	github.com/krustd/nexus-registry v0.0.0
 	github.com/prometheus/client_golang v1.20.5
 	google.golang.org/grpc v1.66.2
@@ -62,4 +63,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/krustd/nexus-registry => ../Nexus-Registry
+replace (
+	github.com/krustd/nexus-config => ../Nexus-Config
+	github.com/krustd/nexus-registry => ../Nexus-Registry
+)

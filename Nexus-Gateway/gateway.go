@@ -8,14 +8,21 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
+	"github.com/krustd/nexus-config/common"
+	"github.com/krustd/nexus-config/sdk"
 	"github.com/krustd/nexus-gateway/config"
 	"github.com/krustd/nexus-gateway/gateway"
 	"github.com/krustd/nexus-registry/registry"
 	"github.com/krustd/nexus-registry/registry/etcd"
 )
 
-var gw *gateway.Gateway
+var (
+	gw           *gateway.Gateway
+	configClient *sdk.Client
+	holder       *config.DynamicConfigHolder
+)
 
 // Setup 从 TOML 配置文件初始化网关
 func Setup(configPath string) error {
@@ -37,14 +44,79 @@ func Setup(configPath string) error {
 		return fmt.Errorf("nexus-gateway: create registry: %w", err)
 	}
 
-	gw, err = gateway.New(cfg, reg)
+	// 初始化动态配置持有器
+	holder = config.NewDynamicConfigHolder()
+
+	// 连接配置中心
+	if cfg.ConfigCenter.ServerAddr != "" {
+		if err := setupConfigCenter(cfg.ConfigCenter); err != nil {
+			reg.Close(context.Background())
+			return fmt.Errorf("nexus-gateway: setup config center: %w", err)
+		}
+	} else {
+		log.Println("[nexus-gateway] config center not configured, using defaults")
+	}
+
+	gw, err = gateway.New(cfg, holder, reg)
 	if err != nil {
-		// 避免 registry 连接泄漏
 		reg.Close(context.Background())
+		if configClient != nil {
+			configClient.Stop()
+		}
 		return fmt.Errorf("nexus-gateway: create gateway: %w", err)
 	}
 
 	log.Printf("[nexus-gateway] initialized, addr=%s", cfg.Server.Addr)
+	return nil
+}
+
+// setupConfigCenter 连接配置中心，首次拉取动态配置并启动长轮询
+func setupConfigCenter(ccCfg config.ConfigCenterConfig) error {
+	clientID := ccCfg.ClientID
+	if clientID == "" {
+		clientID, _ = os.Hostname()
+	}
+
+	sdkCfg := &common.ClientConfig{
+		ServerAddr:  ccCfg.ServerAddr,
+		Namespace:   ccCfg.Namespace,
+		ConfigKey:   ccCfg.ConfigKey,
+		ClientID:    clientID,
+		PollTimeout: ccCfg.PollTimeout,
+		RetryDelay:  ccCfg.RetryDelay,
+	}
+
+	configClient = sdk.NewClient(sdkCfg)
+
+	// 注册配置变更监听器
+	configClient.AddChangeListener(func(version *common.ConfigVersion) {
+		dynCfg := &config.DynamicConfig{}
+		if err := common.ParseConfig(version.Value, common.ConfigFormat(version.Format), dynCfg); err != nil {
+			log.Printf("[nexus-gateway] parse dynamic config failed: %v", err)
+			return
+		}
+		holder.Store(dynCfg)
+		log.Printf("[nexus-gateway] dynamic config updated, md5=%s", version.MD5)
+	})
+
+	// 启动客户端（首次拉取 + 长轮询）
+	if err := configClient.Start(context.Background()); err != nil {
+		return fmt.Errorf("start config client: %w", err)
+	}
+
+	// 尝试将首次拉取的配置解析到 holder
+	if version, err := configClient.GetConfig(); err == nil {
+		dynCfg := &config.DynamicConfig{}
+		if err := common.ParseConfig(version.Value, common.ConfigFormat(version.Format), dynCfg); err != nil {
+			log.Printf("[nexus-gateway] parse initial dynamic config failed: %v", err)
+		} else {
+			holder.Store(dynCfg)
+			log.Println("[nexus-gateway] initial dynamic config loaded from config center")
+		}
+	} else {
+		log.Printf("[nexus-gateway] initial config fetch not available, using defaults: %v", err)
+	}
+
 	return nil
 }
 
@@ -65,6 +137,9 @@ func Start() {
 
 // Shutdown 优雅关闭
 func Shutdown() {
+	if configClient != nil {
+		configClient.Stop()
+	}
 	if gw != nil {
 		gw.Shutdown()
 		log.Println("[nexus-gateway] shutdown complete")

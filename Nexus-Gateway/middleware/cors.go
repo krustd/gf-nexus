@@ -9,33 +9,42 @@ import (
 	"github.com/krustd/nexus-gateway/config"
 )
 
-// CORS 处理跨域请求
-func CORS(cfg config.CORSConfig) ghttp.HandlerFunc {
-	if !cfg.Enabled {
-		return passthrough
-	}
-
-	allowOriginSet := make(map[string]bool, len(cfg.AllowOrigins))
-	allowAll := false
-	for _, o := range cfg.AllowOrigins {
-		if o == "*" {
-			allowAll = true
-		}
-		allowOriginSet[o] = true
-	}
-
-	methods := strings.Join(cfg.AllowMethods, ", ")
-	headers := strings.Join(cfg.AllowHeaders, ", ")
-	maxAge := strconv.Itoa(cfg.MaxAgeSec)
-
+// CORS 处理跨域请求（动态读取配置）
+func CORS(holder *config.DynamicConfigHolder) ghttp.HandlerFunc {
 	return func(r *ghttp.Request) {
+		cfg := holder.Load().CORS
+
+		if !cfg.Enabled {
+			r.Middleware.Next()
+			return
+		}
+
 		origin := r.Header.Get("Origin")
 		if origin == "" {
 			r.Middleware.Next()
 			return
 		}
 
-		if allowAll || allowOriginSet[origin] {
+		// 判断 origin 是否允许
+		allowAll := false
+		allowed := false
+		for _, o := range cfg.AllowOrigins {
+			if o == "*" {
+				allowAll = true
+				allowed = true
+				break
+			}
+			if o == origin {
+				allowed = true
+				break
+			}
+		}
+
+		if allowed {
+			methods := strings.Join(cfg.AllowMethods, ", ")
+			headers := strings.Join(cfg.AllowHeaders, ", ")
+			maxAge := strconv.Itoa(cfg.MaxAgeSec)
+
 			// CORS 规范：AllowCredentials 与 wildcard "*" 不能同时使用
 			if allowAll && !cfg.AllowCredentials {
 				r.Response.Header().Set("Access-Control-Allow-Origin", "*")

@@ -10,26 +10,40 @@ import (
 )
 
 type ipEntry struct {
-	ip   net.IP   // 精确 IP
+	ip   net.IP     // 精确 IP
 	cidr *net.IPNet // CIDR 网段
 }
 
-// IPFilter IP 黑白名单过滤
-func IPFilter(cfg config.IPFilterConfig) ghttp.HandlerFunc {
-	if !cfg.Enabled {
-		return passthrough
-	}
-
-	entries := parseIPEntries(cfg.Addresses)
+// IPFilter IP 黑白名单过滤（动态读取配置）
+func IPFilter(holder *config.DynamicConfigHolder) ghttp.HandlerFunc {
+	// 缓存已解析的 IP 条目，避免每次请求重复解析
+	var (
+		cachedCfg     *config.IPFilterConfig
+		cachedEntries []ipEntry
+	)
 
 	return func(r *ghttp.Request) {
+		cfg := holder.Load().IPFilter
+
+		if !cfg.Enabled {
+			r.Middleware.Next()
+			return
+		}
+
+		// 配置变更时重新解析
+		if cachedCfg == nil || !ipFilterEqual(cachedCfg, &cfg) {
+			cachedEntries = parseIPEntries(cfg.Addresses)
+			cfgCopy := cfg
+			cachedCfg = &cfgCopy
+		}
+
 		clientIP := net.ParseIP(r.GetClientIp())
 		if clientIP == nil {
 			r.Middleware.Next()
 			return
 		}
 
-		matched := matchIP(clientIP, entries)
+		matched := matchIP(clientIP, cachedEntries)
 
 		switch cfg.Mode {
 		case "whitelist":
@@ -46,6 +60,21 @@ func IPFilter(cfg config.IPFilterConfig) ghttp.HandlerFunc {
 
 		r.Middleware.Next()
 	}
+}
+
+func ipFilterEqual(a *config.IPFilterConfig, b *config.IPFilterConfig) bool {
+	if a.Enabled != b.Enabled || a.Mode != b.Mode {
+		return false
+	}
+	if len(a.Addresses) != len(b.Addresses) {
+		return false
+	}
+	for i := range a.Addresses {
+		if a.Addresses[i] != b.Addresses[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func parseIPEntries(addresses []string) []ipEntry {
