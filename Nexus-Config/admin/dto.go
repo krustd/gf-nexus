@@ -1,6 +1,6 @@
 package admin
 
-import "github.com/krustd/nexus-config/common"
+import "github.com/krustd/gf-nexus/nexus-config/common"
 
 // CreateNamespaceReq 创建命名空间请求
 type CreateNamespaceReq struct {

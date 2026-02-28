@@ -5,8 +5,8 @@ import (
 	"log"
 	"sync"
 
-	"github.com/krustd/nexus-registry/registry"
-	"github.com/krustd/nexus-registry/registry/balancer"
+	"github.com/krustd/gf-nexus/nexus-registry/registry"
+	"github.com/krustd/gf-nexus/nexus-registry/registry/balancer"
 )
 
 // ResolverPool 按服务名懒加载并缓存 Resolver，支持策略热更新

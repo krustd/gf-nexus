@@ -4,7 +4,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 
-	"github.com/krustd/nexus-gateway/internal"
+	"github.com/krustd/gf-nexus/nexus-gateway/internal"
 )
 
 // Trace 生成或传递 trace_id，注入到 Context 和响应头

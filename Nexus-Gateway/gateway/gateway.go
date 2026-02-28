@@ -7,10 +7,10 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	"github.com/krustd/nexus-gateway/config"
-	"github.com/krustd/nexus-gateway/metrics"
-	"github.com/krustd/nexus-gateway/middleware"
-	"github.com/krustd/nexus-registry/registry"
+	"github.com/krustd/gf-nexus/nexus-gateway/config"
+	"github.com/krustd/gf-nexus/nexus-gateway/metrics"
+	"github.com/krustd/gf-nexus/nexus-gateway/middleware"
+	"github.com/krustd/gf-nexus/nexus-registry/registry"
 )
 
 // Gateway API 网关核心

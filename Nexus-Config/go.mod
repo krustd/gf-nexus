@@ -1,4 +1,4 @@
-module github.com/krustd/nexus-config
+module github.com/krustd/gf-nexus/nexus-config
 
 go 1.25.0
 

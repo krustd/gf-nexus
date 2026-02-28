@@ -10,12 +10,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/krustd/nexus-config/common"
-	"github.com/krustd/nexus-config/sdk"
-	"github.com/krustd/nexus-gateway/config"
-	"github.com/krustd/nexus-gateway/gateway"
-	"github.com/krustd/nexus-registry/registry"
-	"github.com/krustd/nexus-registry/registry/etcd"
+	"github.com/krustd/gf-nexus/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/sdk"
+	"github.com/krustd/gf-nexus/nexus-gateway/config"
+	"github.com/krustd/gf-nexus/nexus-gateway/gateway"
+	"github.com/krustd/gf-nexus/nexus-registry/registry"
+	"github.com/krustd/gf-nexus/nexus-registry/registry/etcd"
 )
 
 var (

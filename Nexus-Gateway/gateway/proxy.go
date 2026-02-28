@@ -11,8 +11,8 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	"github.com/krustd/nexus-gateway/config"
-	"github.com/krustd/nexus-registry/registry"
+	"github.com/krustd/gf-nexus/nexus-gateway/config"
+	"github.com/krustd/gf-nexus/nexus-registry/registry"
 )
 
 // ProxyHandler 泛化调用反向代理

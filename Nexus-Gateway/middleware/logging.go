@@ -6,8 +6,8 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	"github.com/krustd/nexus-gateway/internal"
-	"github.com/krustd/nexus-gateway/metrics"
+	"github.com/krustd/gf-nexus/nexus-gateway/internal"
+	"github.com/krustd/gf-nexus/nexus-gateway/metrics"
 )
 
 // Logging 请求日志中间件，记录请求信息和延迟

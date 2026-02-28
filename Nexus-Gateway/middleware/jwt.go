@@ -14,8 +14,8 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/krustd/nexus-gateway/config"
-	"github.com/krustd/nexus-gateway/internal"
+	"github.com/krustd/gf-nexus/nexus-gateway/config"
+	"github.com/krustd/gf-nexus/nexus-gateway/internal"
 )
 
 type contextKeyType string

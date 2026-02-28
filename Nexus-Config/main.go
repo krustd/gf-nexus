@@ -7,10 +7,10 @@ import (
 	"syscall"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/krustd/nexus-config/admin"
-	"github.com/krustd/nexus-config/common"
-	"github.com/krustd/nexus-config/server"
-	"github.com/krustd/nexus-config/storage/sqlite"
+	"github.com/krustd/gf-nexus/nexus-config/admin"
+	"github.com/krustd/gf-nexus/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/server"
+	"github.com/krustd/gf-nexus/nexus-config/storage/sqlite"
 )
 
 func main() {

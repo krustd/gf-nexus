@@ -1,4 +1,4 @@
-module github.com/krustd/nexus-gateway
+module github.com/krustd/gf-nexus/nexus-gateway
 
 go 1.25.0
 
@@ -8,8 +8,8 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.18.0
-	github.com/krustd/nexus-config v0.0.0
-	github.com/krustd/nexus-registry v0.0.0
+	github.com/krustd/gf-nexus/nexus-config v0.0.0
+	github.com/krustd/gf-nexus/nexus-registry v0.0.0
 	github.com/prometheus/client_golang v1.20.5
 	google.golang.org/grpc v1.66.2
 )
@@ -64,6 +64,6 @@ require (
 )
 
 replace (
-	github.com/krustd/nexus-config => ../Nexus-Config
-	github.com/krustd/nexus-registry => ../Nexus-Registry
+	github.com/krustd/gf-nexus/nexus-config => ../Nexus-Config
+	github.com/krustd/gf-nexus/nexus-registry => ../Nexus-Registry
 )

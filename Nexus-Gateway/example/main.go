@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	nexus "github.com/krustd/nexus-gateway"
+	nexus "github.com/krustd/gf-nexus/nexus-gateway"
 )
 
 func main() {

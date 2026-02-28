@@ -1,4 +1,4 @@
-module github.com/krustd/nexus-registry
+module github.com/krustd/gf-nexus/nexus-registry
 
 go 1.23.0
 

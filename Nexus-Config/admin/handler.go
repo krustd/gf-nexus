@@ -5,8 +5,8 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/krustd/nexus-config/common"
-	"github.com/krustd/nexus-config/storage"
+	"github.com/krustd/gf-nexus/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/storage"
 )
 
 // ConfigNotifier 配置变更通知接口

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/krustd/nexus-config/common"
-	"github.com/krustd/nexus-config/storage"
+	"github.com/krustd/gf-nexus/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/storage"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

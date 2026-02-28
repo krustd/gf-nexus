@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/krustd/nexus-gateway/config"
+	"github.com/krustd/gf-nexus/nexus-gateway/config"
 )
 
 // GRPCProxy 处理 HTTP→gRPC 转码（仅 Unary）

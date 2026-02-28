@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/krustd/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/common"
 )
 
 // Storage 配置存储接口

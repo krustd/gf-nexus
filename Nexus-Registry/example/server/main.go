@@ -4,7 +4,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	nexus "github.com/krustd/nexus-registry"
+	nexus "github.com/krustd/gf-nexus/nexus-registry"
 )
 
 func main() {

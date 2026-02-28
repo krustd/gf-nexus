@@ -7,8 +7,8 @@ import (
 	"syscall"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/krustd/nexus-config/common"
-	"github.com/krustd/nexus-config/sdk"
+	"github.com/krustd/gf-nexus/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/sdk"
 )
 
 // AppConfig 应用配置示例

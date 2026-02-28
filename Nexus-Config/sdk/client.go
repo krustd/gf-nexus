@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krustd/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/common"
 )
 
 // ChangeListener 配置变更监听器

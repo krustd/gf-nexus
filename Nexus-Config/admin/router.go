@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/krustd/nexus-config/storage"
+	"github.com/krustd/gf-nexus/nexus-config/storage"
 )
 
 // SetupRouter 设置 Admin API 路由

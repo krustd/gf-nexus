@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/krustd/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/common"
 )
 
 // ConfigNotifier 配置变更通知器

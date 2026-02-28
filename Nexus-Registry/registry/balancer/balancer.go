@@ -6,7 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/krustd/nexus-registry/registry"
+	"github.com/krustd/gf-nexus/nexus-registry/registry"
 )
 
 var ErrNoInstance = fmt.Errorf("nexus: no available instance")

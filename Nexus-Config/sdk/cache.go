@@ -3,7 +3,7 @@ package sdk
 import (
 	"sync"
 
-	"github.com/krustd/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/common"
 )
 
 // ConfigCache 配置本地缓存

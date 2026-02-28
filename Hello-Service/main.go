@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	nexus "github.com/krustd/nexus-registry"
+	nexus "github.com/krustd/gf-nexus/nexus-registry"
 
-	pb "github.com/krustd/hello-service/proto"
+	pb "github.com/krustd/gf-nexus/hello-service/proto"
 )
 
 // helloServer 实现 HelloService

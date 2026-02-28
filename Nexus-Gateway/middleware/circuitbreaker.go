@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krustd/nexus-gateway/config"
+	"github.com/krustd/gf-nexus/nexus-gateway/config"
 )
 
 type circuitState int

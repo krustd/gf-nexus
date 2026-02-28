@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/krustd/nexus-config/common"
-	"github.com/krustd/nexus-config/sdk"
+	"github.com/krustd/gf-nexus/nexus-config/common"
+	"github.com/krustd/gf-nexus/nexus-config/sdk"
 )
 
 var (
