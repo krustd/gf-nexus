@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package hello;
+
+option go_package = "github.com/krustd/hello-service/proto/hello";
+
+service HelloService {
+  // 无参数，返回 Hello, World!
+  rpc SayHello(HelloRequest) returns (HelloResponse);
+
+  // 带名字，返回 Hello, {name}!
+  rpc SayHelloByName(NameRequest) returns (HelloResponse);
+}
+
+message HelloRequest {}
+
+message NameRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string message = 1;
+  string service = 2;
+}

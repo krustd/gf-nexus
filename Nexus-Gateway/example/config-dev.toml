@@ -1,0 +1,25 @@
+# 开发测试用 Gateway 配置（不依赖配置中心，JWT/限流/熔断默认关闭）
+
+[gateway]
+
+[gateway.registry]
+endpoints    = ["127.0.0.1:2379"]
+dial_timeout = 5
+prefix       = "/nexus/services"
+
+[gateway.server]
+addr = ":8080"
+
+# 不配置 config_center，则使用默认动态配置：
+#   JWT       = 关闭
+#   IP filter = 关闭
+#   RateLimit = 关闭
+#   Circuit   = 关闭
+
+[gateway.timeout]
+connect_ms  = 3000
+response_ms = 10000
+
+[gateway.metrics]
+enabled = true
+path    = "/metrics"

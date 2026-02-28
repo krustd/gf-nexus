@@ -1,0 +1,15 @@
+[nexus.registry]
+endpoints    = ["127.0.0.1:2379"]
+dial_timeout = 5
+lease_ttl    = 15
+prefix       = "/nexus/services"
+
+[nexus.service]
+name     = "hello-service"
+version  = "v1.0.0"
+protocol = "grpc"
+address  = "127.0.0.1:9090"
+weight   = 10
+
+[nexus.service.metadata]
+env = "dev"

@@ -15,8 +15,9 @@ type EtcdRegistry struct {
 	client *clientv3.Client
 	config *registry.Config
 
-	mu         sync.RWMutex
+	mu         sync.Mutex
 	registered map[string]clientv3.LeaseID
+	cancels    map[string]context.CancelFunc // keepalive cancel per key
 }
 
 // 编译期检查：确保实现了 Registry 接口
@@ -55,6 +56,7 @@ func New(conf *registry.Config) (*EtcdRegistry, error) {
 		client:     client,
 		config:     conf,
 		registered: make(map[string]clientv3.LeaseID),
+		cancels:    make(map[string]context.CancelFunc),
 	}, nil
 }
 
@@ -74,24 +76,26 @@ func (r *EtcdRegistry) Register(ctx context.Context, instance *registry.ServiceI
 	}
 
 	key := instance.BuildKey(r.config.Prefix)
-	_, err = r.client.Put(ctx, key, val, clientv3.WithLease(lease.ID))
-	if err != nil {
+	if _, err = r.client.Put(ctx, key, val, clientv3.WithLease(lease.ID)); err != nil {
 		return fmt.Errorf("nexus-etcd: put %s: %w", key, err)
 	}
 
-	ch, err := r.client.KeepAlive(ctx, lease.ID)
+	// KeepAlive 使用独立的 background context，不受调用方 ctx 生命周期影响
+	kaCtx, kaCancel := context.WithCancel(context.Background())
+	ch, err := r.client.KeepAlive(kaCtx, lease.ID)
 	if err != nil {
+		kaCancel()
 		return fmt.Errorf("nexus-etcd: keepalive: %w", err)
 	}
 	go func() {
-		for resp := range ch {
-			_ = resp
+		for range ch {
 		}
 		log.Printf("[nexus-etcd] keepalive closed: %s", key)
 	}()
 
 	r.mu.Lock()
 	r.registered[key] = lease.ID
+	r.cancels[key] = kaCancel
 	r.mu.Unlock()
 
 	log.Printf("[nexus-etcd] registered: %s → %s (%s)", key, instance.Address, instance.Protocol)
@@ -105,6 +109,10 @@ func (r *EtcdRegistry) Deregister(ctx context.Context, instance *registry.Servic
 	leaseID, ok := r.registered[key]
 	if ok {
 		delete(r.registered, key)
+		if cancel, exists := r.cancels[key]; exists {
+			cancel()
+			delete(r.cancels, key)
+		}
 	}
 	r.mu.Unlock()
 
@@ -197,22 +205,23 @@ func (r *EtcdRegistry) Watch(ctx context.Context, serviceName string) (<-chan re
 }
 
 func (r *EtcdRegistry) Close(ctx context.Context) error {
-	r.mu.RLock()
+	r.mu.Lock()
+	for _, cancel := range r.cancels {
+		cancel()
+	}
 	leases := make(map[string]clientv3.LeaseID, len(r.registered))
 	for k, v := range r.registered {
 		leases[k] = v
 	}
-	r.mu.RUnlock()
+	r.registered = make(map[string]clientv3.LeaseID)
+	r.cancels = make(map[string]context.CancelFunc)
+	r.mu.Unlock()
 
 	for key, leaseID := range leases {
 		if _, err := r.client.Revoke(ctx, leaseID); err != nil {
 			log.Printf("[nexus-etcd] revoke %s failed: %v", key, err)
 		}
 	}
-
-	r.mu.Lock()
-	r.registered = make(map[string]clientv3.LeaseID)
-	r.mu.Unlock()
 
 	return r.client.Close()
 }

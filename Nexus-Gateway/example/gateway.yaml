@@ -3,25 +3,8 @@
 
 # ─── JWT 认证（非对称加密 + 密钥轮换）───
 jwt:
-  enabled: true
-  keys:
-    # 支持多个公钥同时有效，实现平滑密钥轮换
-    # 轮换步骤：
-    #   1. 添加新 kid 的公钥到此列表
-    #   2. 签发方切换到新私钥
-    #   3. 等待旧 token 过期后移除旧 kid
-    - kid: "key-2024-01"
-      algorithm: RS256          # RS256 或 EdDSA
-      public_key: |
-        -----BEGIN PUBLIC KEY-----
-        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
-        -----END PUBLIC KEY-----
-    # - kid: "key-2024-02"
-    #   algorithm: EdDSA
-    #   public_key: |
-    #     -----BEGIN PUBLIC KEY-----
-    #     MCowBQYDK2VwAyEA...
-    #     -----END PUBLIC KEY-----
+  enabled: false               # 测试时关闭，生产时改为 true 并配置真实公钥
+  keys: []
   skip_paths:
     - /health
     - /metrics
